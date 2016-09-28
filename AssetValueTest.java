@@ -4,7 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class AssetValue
+public class AssetValueTest
 {
     AssetValue assetValue;
 
@@ -18,7 +18,7 @@ public class AssetValue
     public void Canary()
     {
         assertTrue(true);
-}
+    }
 
     @Test
     public void correctValueIsComputed()
@@ -33,6 +33,18 @@ public class AssetValue
         assetValue.computeAssetValue(2500,100);
 
         assertEquals (500000, assetValue.getNetAssetValue());
+    }
+
+    @Test
+    public void computeAssetValueWithNegativeStockPrice()
+    {
+        assertEquals(-1, assetValue.computeAssetValue(2500, -1));
+    }
+
+    @Test
+    public void computeAssetValueWithNegativeNumOfShares()
+    {
+        assertEquals(-1, assetValue.computeAssetValue(-1, 2500));
     }
 
 }
