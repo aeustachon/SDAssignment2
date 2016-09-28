@@ -1,4 +1,4 @@
-package stocks;
+package assetValue;
 
 import org.junit.Before;
 import org.junit.Test;
