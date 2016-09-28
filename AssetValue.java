@@ -1,4 +1,4 @@
-package stocks;
+package assetValue;
 
 public class AssetValue {
 
