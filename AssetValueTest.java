@@ -4,7 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class StocksTest
+public class AssetValue
 {
     AssetValue assetValue;
 
