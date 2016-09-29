@@ -21,19 +21,13 @@ public class AssetValueTest
     }
 
     @Test
-    public void correctValueIsComputed()
+    public void computeAssetValueCorrectValueIsComputed()
     {
         assertEquals(12500000, assetValue.computeAssetValue(5000, 2500));
     }
-
-    @Test
-    public void computeAssetValueAddsToNetAssetValue()
-    {
-        assetValue.computeAssetValue(2500,100);
-        assetValue.computeAssetValue(2500,100);
-
-        assertEquals (500000, assetValue.getNetAssetValue());
-    }
+//Venkat: The above test was for computeAssetValue. The next test should continue with
+//computeAssetValue. Should not jump to something else suddenly. Start with something,
+//stay with that through a few tests: positive, negative, and may be exception test if needed.
 
     @Test
     public void computeAssetValueWithNegativeStockPrice()
@@ -45,6 +39,11 @@ public class AssetValueTest
     public void computeAssetValueWithNegativeNumOfShares()
     {
         assertEquals(-1, assetValue.computeAssetValue(-1, 2500));
+    }
+
+    @Test public void computeAssetValueVeryLargeNumber()
+    {
+        assertEquals(-1, assetValue.computeAssetValue(1500000000, 2500));
     }
 
 }
