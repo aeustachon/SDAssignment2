@@ -18,6 +18,7 @@ public class AssetValueTest
     AssetValue assetValue;
     StockPriceFetcher stockPriceFetcher;
     Map<String, Object> assetValuesMapTest;
+    ArrayList<String> listOfStocksWithErrors;
 
     @Before
     public void setUp()
@@ -25,6 +26,7 @@ public class AssetValueTest
         stockPriceFetcher = Mockito.mock(StockPriceFetcher.class);
         assetValue = new AssetValue(stockPriceFetcher);
         assetValuesMapTest = new HashMap<String, Object>();
+        listOfStocksWithErrors = new ArrayList<String>();
     }
 
     @Test
@@ -139,6 +141,43 @@ public class AssetValueTest
 
         assertEquals(20060000, assetValue.assetValuesMap.get("Net asset values"));
     }
+
+    @Test
+    public void computeNetAssetValueStoresInvalidSymbolsInList() {
+        AssetValue assetValue = new AssetValue(stockPriceFetcher) {
+            @Override
+            public int getStockPrice(String stock) {
+                return 0;
+            }
+        };
+
+        listOfStocksWithErrors.add("YHOOO");
+        listOfStocksWithErrors.add("GOOOG");
+        assetValuesMapTest.put("Invalid symbol", listOfStocksWithErrors);
+        assetValue.computeNetAssetValues("YHOOO");
+        assetValue.computeNetAssetValues("GOOOG");
+
+        assertEquals(assetValuesMapTest.get("Invalid symbol"), assetValue.assetValuesMap.get("Invalid symbol"));
+    }
+
+    @Test
+    public void computeNetAssetValueStoresNetworkErrorsInList() {
+        AssetValue assetValue = new AssetValue(stockPriceFetcher) {
+            @Override
+            public int getStockPrice(String stock) {
+                return -1;
+            }
+        };
+
+        listOfStocksWithErrors.add("YHOOO");
+        listOfStocksWithErrors.add("GOOOG");
+        assetValuesMapTest.put("Network error", listOfStocksWithErrors);
+        assetValue.computeNetAssetValues("YHOOO");
+        assetValue.computeNetAssetValues("GOOOG");
+
+        assertEquals(assetValuesMapTest.get("Network error"), assetValue.assetValuesMap.get("Network error"));
+    }
+
 
 
 
