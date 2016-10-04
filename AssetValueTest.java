@@ -119,8 +119,10 @@ public class AssetValueTest
         };
 
         assetValue.computeNetAssetValues("YHOO");
+        assetValue.computeNetAssetValues("GOOG");
 
         assertEquals(10030000, assetValue.assetValuesMap.get("YHOO"));
+        assertEquals(10030000, assetValue.assetValuesMap.get("GOOG"));
     }
 
     @Test
@@ -136,10 +138,6 @@ public class AssetValueTest
         assetValue.computeNetAssetValues("GOOG");
 
         assertEquals(20060000, assetValue.assetValuesMap.get("Net asset values"));
-    }
-
-    @Test public void computeNetAssetValueStoresInvalidTickersInList() {
-
     }
 
 
