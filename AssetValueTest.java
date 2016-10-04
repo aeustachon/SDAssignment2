@@ -12,12 +12,14 @@ public class AssetValueTest
 {
     AssetValue assetValue;
     StockPriceFetcher stockPriceFetcher;
+    boolean getStockPriceIsCalled;
 
     @Before
     public void setUp()
     {
         stockPriceFetcher = Mockito.mock(StockPriceFetcher.class);
         assetValue = new AssetValue(stockPriceFetcher);
+        getStockPriceIsCalled = false;
     }
 
     @Test
@@ -29,7 +31,7 @@ public class AssetValueTest
     @Test
     public void correctValueIsComputed()
     {
-        assertEquals(12500000, assetValue.computeAssetValue(5000, 2500));
+        assertEquals(12537500, assetValue.computeAssetValue(5015, 2500));
     }
 
     @Test
@@ -54,48 +56,67 @@ public class AssetValueTest
     public void getStockPriceWithOnlyOneStockTickerSymbol()
     {
         when(stockPriceFetcher.getPrice("YHOO")).thenReturn(81496);
-        try
-        {
-            assertEquals(81496, assetValue.getStockPrice("YHOO"));
-        }
-        catch(Exception e) {}
+
+        assertEquals(81496, assetValue.getStockPrice("YHOO"));
     }
 
     @Test
     public void getStockPriceWithDifferentStockTickerSymbols()
     {
         when(stockPriceFetcher.getPrice("AAPL")).thenReturn(2058);
-        try
-        {
-            assertEquals(2058, assetValue.getStockPrice("AAPL"));
-        }
-        catch (Exception e) {}
+
+        assertEquals(2058, assetValue.getStockPrice("AAPL"));
     }
 
     @Test
-    public void getStockPriceWithInvalidStockTickerSymbolReturnsZero()
+    public void getStockPriceWithInvalidStockTickerSymbolThrowsException()
     {
-        when(stockPriceFetcher.getPrice("YHOOO")).thenReturn(-1);
+        when(stockPriceFetcher.getPrice("YHOOO")).thenThrow(new RuntimeException("Invalid ticker symbol"));
+
         try
         {
-            assertEquals(-1, assetValue.getStockPrice("YHOOO"));
-            fail();
+            assetValue.getStockPrice("YHOOO");
+            fail("Expected exception for invalid stock ticker symbol.");
         }
-        catch(Exception e)
+        catch(RuntimeException e)
         {
-            assertTrue(true);
+            assertEquals(e.getMessage(), "Invalid ticker symbol");
         }
     }
 
     @Test
-    public void getStockPriceWithNetworkErrorReturnsZero()
+    public void getStockPriceWithNetworkErrorThrowsException()
     {
-        StockPriceFetcher stockPriceFetcherWithError = Mockito.mock(StockPriceFetcher.class);
-        when(stockPriceFetcherWithError.getPrice("YHOO"))
-                .thenThrow(new RuntimeException("Network error"));
-        try {
-            assertEquals(0, assetValue.getStockPrice("YHOO"));
+        StockPriceFetcher stockPriceFetcherWithNetworkError = Mockito.mock(StockPriceFetcher.class);
+        when(stockPriceFetcherWithNetworkError.getPrice("YHOO")).thenThrow(new RuntimeException("Network error"));
+
+        assetValue = new AssetValue(stockPriceFetcherWithNetworkError);
+
+        try
+        {
+            assetValue.getStockPrice("YHOO");
+            fail("Expected exception for network error.");
         }
-        catch(Exception e){}
+        catch(RuntimeException e){ //Venkat: Use a different exception here than the one used for invalid symbol so we clearly know the difference about what happended.
+            assertEquals(e.getMessage(), "Network error");
+        }
+    }
+
+    @Test
+    public void computeNetAssetValuesCallsGetStockPriceFunction()
+    {
+        AssetValue assetValue = new AssetValue(stockPriceFetcher)
+        {
+            @Override
+            protected int getStockPrice(String stock)
+            {
+                getStockPriceIsCalled = true;
+                return 0;
+            }
+        };
+
+        assetValue.getStockPrice("YHOO");
+
+        assertTrue(getStockPriceIsCalled);
     }
 }
