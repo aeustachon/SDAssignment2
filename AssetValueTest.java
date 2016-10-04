@@ -4,6 +4,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -12,14 +17,14 @@ public class AssetValueTest
 {
     AssetValue assetValue;
     StockPriceFetcher stockPriceFetcher;
-    boolean getStockPriceIsCalled;
+    Map<String, Object> assetValuesMapTest;
 
     @Before
     public void setUp()
     {
         stockPriceFetcher = Mockito.mock(StockPriceFetcher.class);
         assetValue = new AssetValue(stockPriceFetcher);
-        getStockPriceIsCalled = false;
+        assetValuesMapTest = new HashMap<String, Object>();
     }
 
     @Test
@@ -29,9 +34,9 @@ public class AssetValueTest
     }
 
     @Test
-    public void correctValueIsComputed()
+    public void correctValueIsComputedUsingGetStockPrice()
     {
-        assertEquals(12537500, assetValue.computeAssetValue(5015, 2500));
+        assertEquals(10030000, assetValue.computeAssetValue(2000, 5015));
     }
 
     @Test
@@ -71,14 +76,15 @@ public class AssetValueTest
     @Test
     public void getStockPriceWithInvalidStockTickerSymbolThrowsException()
     {
-        when(stockPriceFetcher.getPrice("YHOOO")).thenThrow(new RuntimeException("Invalid ticker symbol"));
+        when(stockPriceFetcher.getPrice("YHOOO"))
+                .thenThrow(new NullPointerException("Invalid ticker symbol"));
 
         try
         {
             assetValue.getStockPrice("YHOOO");
             fail("Expected exception for invalid stock ticker symbol.");
         }
-        catch(RuntimeException e)
+        catch(NullPointerException e)
         {
             assertEquals(e.getMessage(), "Invalid ticker symbol");
         }
@@ -88,7 +94,8 @@ public class AssetValueTest
     public void getStockPriceWithNetworkErrorThrowsException()
     {
         StockPriceFetcher stockPriceFetcherWithNetworkError = Mockito.mock(StockPriceFetcher.class);
-        when(stockPriceFetcherWithNetworkError.getPrice("YHOO")).thenThrow(new RuntimeException("Network error"));
+        when(stockPriceFetcherWithNetworkError.getPrice("YHOO"))
+                .thenThrow(new RuntimeException("Network error"));
 
         assetValue = new AssetValue(stockPriceFetcherWithNetworkError);
 
@@ -97,26 +104,47 @@ public class AssetValueTest
             assetValue.getStockPrice("YHOO");
             fail("Expected exception for network error.");
         }
-        catch(RuntimeException e){ //Venkat: Use a different exception here than the one used for invalid symbol so we clearly know the difference about what happended.
+        catch(RuntimeException e){
             assertEquals(e.getMessage(), "Network error");
         }
     }
 
     @Test
-    public void computeNetAssetValuesCallsGetStockPriceFunction()
-    {
-        AssetValue assetValue = new AssetValue(stockPriceFetcher)
-        {
+    public void computeNetAssetValuesCorrectlyComputesAssetValue() {
+        AssetValue assetValue = new AssetValue(stockPriceFetcher) {
             @Override
-            protected int getStockPrice(String stock)
-            {
-                getStockPriceIsCalled = true;
-                return 0;
+            public int getStockPrice(String stock) {
+                return 5015;
             }
         };
 
-        assetValue.getStockPrice("YHOO");
+        assetValue.computeNetAssetValues("YHOO");
 
-        assertTrue(getStockPriceIsCalled);
+        assertEquals(10030000, assetValue.assetValuesMap.get("YHOO"));
     }
+
+    @Test
+    public void computeNetAssetValueCorrectlyComputesNetAssetValue() {
+        AssetValue assetValue = new AssetValue(stockPriceFetcher) {
+            @Override
+            public int getStockPrice(String stock) {
+                return 5015;
+            }
+        };
+
+        assetValue.computeNetAssetValues("YHOO");
+        assetValue.computeNetAssetValues("GOOG");
+
+        assertEquals(20060000, assetValue.assetValuesMap.get("Net asset values"));
+    }
+
+    @Test public void computeNetAssetValueStoresInvalidTickersInList() {
+
+    }
+
+
+
+
+
+
 }
