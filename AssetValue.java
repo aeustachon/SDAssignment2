@@ -1,18 +1,21 @@
 package assetValue;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 public class AssetValue
 {
+    private final int SIZE = 10;
     private StockPriceFetcher stockPriceFetcher;
     protected Map<String, Object> assetValuesMap = new HashMap<String, Object>();
     private int netAssetValue = 0;
+    ArrayList<String> listOfStocksWithInvalidTickers = new ArrayList<String>();
+    ArrayList<String> listOfStocksWithNetworkErrors = new ArrayList<String>();
 
     public AssetValue(StockPriceFetcher theStockPriceFetcher)
     {
         stockPriceFetcher = theStockPriceFetcher;
-        assetValuesMap.put("Net asset values", 0);
     }
 
     public int computeAssetValue(int numberOfShares, int stockPriceWithCents)
@@ -30,7 +33,16 @@ public class AssetValue
     }
 
     public Map<String, Object> computeNetAssetValues(String stock) {
-
+        if(getStockPrice(stock) == 0)
+        {
+            listOfStocksWithInvalidTickers.add(stock);
+            assetValuesMap.put("Invalid symbol", listOfStocksWithInvalidTickers);
+        }
+        else if (getStockPrice(stock) == -1)
+        {
+            listOfStocksWithNetworkErrors.add(stock);
+            assetValuesMap.put("Network error", listOfStocksWithNetworkErrors);
+        }
         int assetValue = computeAssetValue(2000,getStockPrice(stock));
         assetValuesMap.put(stock, assetValue);
 
