@@ -4,29 +4,21 @@ public class AssetValue
 {
     private StockPriceFetcher stockPriceFetcher;
 
+
     public AssetValue(StockPriceFetcher theStockPriceFetcher)
     {
         stockPriceFetcher = theStockPriceFetcher;
     }
 
-    //Venkat: How are we going to deal with cents?
-    public int computeAssetValue(int numberOfShares, int stockPrice)
+    public int computeAssetValue(int numberOfShares, int stockPriceWithCents)
     {
-        if(numberOfShares < 0 || stockPrice <= 0)
-        {
+        if(numberOfShares < 0 || stockPriceWithCents <= 0)
             return 0;
-        }
-
-        return numberOfShares * stockPrice;
+        return numberOfShares * stockPriceWithCents;
     }
 
-    protected int getStockPrice(String stock) throws Exception
+    protected int getStockPrice(String stock)
     {
-        int price = stockPriceFetcher.getPrice(stock);
-        if(price == -1)
-            throw new Exception();
-        else
-            return stockPriceFetcher.getPrice(stock);
+        return stockPriceFetcher.getPrice(stock);
     }
-
 }
