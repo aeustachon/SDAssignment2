@@ -5,28 +5,33 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.io.*;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 public class AssetValueTest
 {
     AssetValue assetValue;
     StockPriceFetcher stockPriceFetcher;
-    Map<String, Object> assetValuesMapTest;
+    Map<String, Integer> assetValuesMapTest;
     ArrayList<String> listOfStocksWithErrors;
+    AssetValue assetValueMock;
+    AssetValue assetValueSpy;
 
     @Before
     public void setUp()
     {
+        assetValueSpy = Mockito.spy(new AssetValue(stockPriceFetcher));
         stockPriceFetcher = Mockito.mock(StockPriceFetcher.class);
         assetValue = new AssetValue(stockPriceFetcher);
-        assetValuesMapTest = new HashMap<String, Object>();
+        assetValuesMapTest = new HashMap<String, Integer>();
         listOfStocksWithErrors = new ArrayList<String>();
+        assetValueMock = Mockito.mock(AssetValue.class);
     }
 
     @Test
@@ -79,14 +84,14 @@ public class AssetValueTest
     public void getStockPriceWithInvalidStockTickerSymbolThrowsException()
     {
         when(stockPriceFetcher.getPrice("YHOOO"))
-                .thenThrow(new NullPointerException("Invalid ticker symbol"));
+                .thenThrow(new IllegalArgumentException("Invalid ticker symbol"));
 
         try
         {
             assetValue.getStockPrice("YHOOO");
             fail("Expected exception for invalid stock ticker symbol.");
         }
-        catch(NullPointerException e)
+        catch(IllegalArgumentException e)
         {
             assertEquals(e.getMessage(), "Invalid ticker symbol");
         }
@@ -97,7 +102,7 @@ public class AssetValueTest
     {
         StockPriceFetcher stockPriceFetcherWithNetworkError = Mockito.mock(StockPriceFetcher.class);
         when(stockPriceFetcherWithNetworkError.getPrice("YHOO"))
-                .thenThrow(new RuntimeException("Network error"));
+                .thenThrow(new IllegalStateException("Network error"));
 
         assetValue = new AssetValue(stockPriceFetcherWithNetworkError);
 
@@ -106,82 +111,68 @@ public class AssetValueTest
             assetValue.getStockPrice("YHOO");
             fail("Expected exception for network error.");
         }
-        catch(RuntimeException e){
+        catch(IllegalStateException e)
+        { //Venkat: This exception makes little sense. Something like IOException or ConnectionException would make more sense.
             assertEquals(e.getMessage(), "Network error");
         }
     }
 
     @Test
     public void computeNetAssetValuesCorrectlyComputesAssetValue() {
-        AssetValue assetValue = new AssetValue(stockPriceFetcher) {
-            @Override
-            public int getStockPrice(String stock) {
-                return 5015;
-            }
-        };
 
-        assetValue.computeNetAssetValues("YHOO");
-        assetValue.computeNetAssetValues("GOOG");
+        when(assetValueMock.computeAssetValue(2000,5015)).thenCallRealMethod();
+        when(assetValueMock.getStockPrice("YHOO")).thenReturn(5015);
+        when(assetValueMock.getStockPrice("GOOG")).thenReturn(5015);
+        when(assetValueMock.computeNetAssetValues(assetValuesMapTest)).thenCallRealMethod();
 
-        assertEquals(10030000, assetValue.assetValuesMap.get("YHOO"));
-        assertEquals(10030000, assetValue.assetValuesMap.get("GOOG"));
-    }
+        assetValuesMapTest.put("GOOG", 2000);
+        assetValuesMapTest.put("YHOO", 2000);
 
-    @Test
-    public void computeNetAssetValueCorrectlyComputesNetAssetValue() {
-        AssetValue assetValue = new AssetValue(stockPriceFetcher) {
-            @Override
-            public int getStockPrice(String stock) {
-                return 5015;
-            }
-        };
-
-        assetValue.computeNetAssetValues("YHOO");
-        assetValue.computeNetAssetValues("GOOG");
-
-        assertEquals(20060000, assetValue.assetValuesMap.get("Net asset values"));
+        assertEquals(10030000, assetValueMock.computeNetAssetValues(assetValuesMapTest).get("YHOO"));
+        assertEquals(10030000, assetValueMock.computeNetAssetValues(assetValuesMapTest).get("GOOG"));
+        assertEquals(20060000, assetValueMock.computeNetAssetValues(assetValuesMapTest).get("TOTAL"));
     }
 
     @Test
     public void computeNetAssetValueStoresInvalidSymbolsInList() {
-        AssetValue assetValue = new AssetValue(stockPriceFetcher) {
-            @Override
-            public int getStockPrice(String stock) {
-                return 0;
-            }
-        };
+        when(assetValueMock.computeAssetValue(2000,5015)).thenCallRealMethod();
+        when(assetValueMock.getStockPrice("YHOO")).thenReturn(5015);
+        when(assetValueMock.getStockPrice("GOOG")).thenReturn(5015);
+        when(assetValueMock.getStockPrice("INVALID1")).thenThrow(new IllegalArgumentException("Invalid ticker symbol"));
+        when(assetValueMock.getStockPrice("INVALID2")).thenThrow(new IllegalArgumentException("Invalid ticker symbol"));
+        when(assetValueMock.computeNetAssetValues(assetValuesMapTest)).thenCallRealMethod();
 
-        listOfStocksWithErrors.add("YHOOO");
-        listOfStocksWithErrors.add("GOOOG");
-        assetValuesMapTest.put("Invalid symbol", listOfStocksWithErrors);
-        assetValue.computeNetAssetValues("YHOOO");
-        assetValue.computeNetAssetValues("GOOOG");
+        assetValuesMapTest.put("GOOG", 2000);
+        assetValuesMapTest.put("YHOO", 2000);
+        assetValuesMapTest.put("INVALID1", 0);
+        assetValuesMapTest.put("INVALID2", 0);
+        listOfStocksWithErrors = (ArrayList) assetValueMock.computeNetAssetValues(assetValuesMapTest).get("INVALID SYMBOLS");
 
-        assertEquals(assetValuesMapTest.get("Invalid symbol"), assetValue.assetValuesMap.get("Invalid symbol"));
+        assertEquals(10030000, assetValueMock.computeNetAssetValues(assetValuesMapTest).get("GOOG"));
+        assertEquals(10030000, assetValueMock.computeNetAssetValues(assetValuesMapTest).get("YHOO"));
+        assertTrue(listOfStocksWithErrors.contains("INVALID1"));
+        assertTrue(listOfStocksWithErrors.contains("INVALID2"));
     }
 
     @Test
-    public void computeNetAssetValueStoresNetworkErrorsInList() {
-        AssetValue assetValue = new AssetValue(stockPriceFetcher) {
-            @Override
-            public int getStockPrice(String stock) {
-                return -1;
-            }
-        };
+    public void computeNetAssetValueStoresNetworkErrorSymbolsInList() {
+        when(assetValueMock.computeAssetValue(2000,5015)).thenCallRealMethod();
+        when(assetValueMock.getStockPrice("YHOO")).thenReturn(5015);
+        when(assetValueMock.getStockPrice("GOOG")).thenReturn(5015);
+        when(assetValueMock.getStockPrice("NETERROR1")).thenThrow(new IllegalStateException("Network error"));
+        when(assetValueMock.getStockPrice("NETERROR2")).thenThrow(new IllegalStateException("Network error"));
+        when(assetValueMock.computeNetAssetValues(assetValuesMapTest)).thenCallRealMethod();
 
-        listOfStocksWithErrors.add("YHOOO");
-        listOfStocksWithErrors.add("GOOOG");
-        assetValuesMapTest.put("Network error", listOfStocksWithErrors);
-        assetValue.computeNetAssetValues("YHOOO");
-        assetValue.computeNetAssetValues("GOOOG");
+        assetValuesMapTest.put("NETERROR1", 0);
+        assetValuesMapTest.put("NETERROR2", 0);
+        assetValuesMapTest.put("GOOG", 2000);
+        assetValuesMapTest.put("YHOO", 2000);
+        listOfStocksWithErrors = (ArrayList) assetValueMock.computeNetAssetValues(assetValuesMapTest).get("NETWORK ERRORS");
 
-        assertEquals(assetValuesMapTest.get("Network error"), assetValue.assetValuesMap.get("Network error"));
+
+        assertEquals(10030000, assetValueMock.computeNetAssetValues(assetValuesMapTest).get("GOOG"));
+        assertEquals(10030000, assetValueMock.computeNetAssetValues(assetValuesMapTest).get("YHOO"));
+        assertTrue(listOfStocksWithErrors.contains("NETERROR1"));
+        assertTrue(listOfStocksWithErrors.contains("NETERROR2"));
     }
-
-
-
-
-
-
-
 }
